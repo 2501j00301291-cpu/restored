@@ -1,0 +1,2184 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+
+  <!-- External Libraries (moved out of inline tags) -->
+  
+  
+  
+  
+
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<meta content="#FF6B3D" name="theme-color"/>
+<title>Seva - Food Donation Platform</title>
+
+
+
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #E8EFF5; }
+    .hide { display: none !important; }
+    .btn-primary {
+      background: #1E3A5F; color: white; padding: 14px 32px; border-radius: 50px;
+      font-weight: 600; border: none; cursor: pointer; transition: all 0.3s; width: 100%;
+    }
+    .btn-primary:active { transform: scale(0.95); }
+    .btn-secondary {
+      background: white; color: #FF6B3D; padding: 14px 32px; border-radius: 50px;
+      font-weight: 600; border: 2px solid #FF6B3D; cursor: pointer; width: 100%;
+    }
+    .btn-chat {
+      background: #25D366; color: white; padding: 8px 16px; border-radius: 20px;
+      font-size: 12px; font-weight: 600; border: none; cursor: pointer; position: relative;
+    }
+    .card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 16px; }
+    .tab-active { border-bottom: 3px solid #FF6B3D; color: #FF6B3D; }
+    .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+    .badge-posted { background: #E3F2FD; color: #1565C0; }
+    .badge-accepted { background: #FFF3E0; color: #E65100; }
+    .badge-picked_up { background: #F3E5F5; color: #7B1FA2; }
+    .badge-delivered { background: #E8F5E9; color: #2E7D32; }
+    .badge-veg { background: #E8F5E9; color: #2E7D32; }
+    .badge-nonveg { background: #FFEBEE; color: #C62828; }
+    #map, #location-map, #inline-pickup-map { height: 400px; width: 100%; border-radius: 12px; }
+    .reward-card { background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); color: white; }
+    .location-info { background: #E3F2FD; padding: 12px; border-radius: 8px; margin-top: 8px; }
+    .status-tracker { display: flex; justify-content: space-between; margin: 20px 0; position: relative; }
+    .status-step { flex: 1; text-align: center; position: relative; }
+    .status-step::before { content: ''; position: absolute; top: 20px; left: 50%; right: -50%; height: 2px; background: #e0e0e0; z-index: 0; }
+    .status-step:last-child::before { display: none; }
+    .status-dot { width: 40px; height: 40px; border-radius: 50%; background: #e0e0e0; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; position: relative; z-index: 1; }
+    .status-step.active .status-dot { background: #4CAF50; color: white; }
+    .status-step.completed .status-dot { background: #2E7D32; color: white; }
+    .notification-badge { position: absolute; top: -5px; right: -5px; background: #FF6B3D; color: white; border-radius: 50%; width: 20px; height: 20px; font-size: 10px; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+    .distance-badge { background: #E3F2FD; color: #1565C0; padding: 4px 8px; border-radius: 8px; font-size: 11px; font-weight: 600; }
+    .chat-container { max-height: 400px; overflow-y: auto; padding: 12px; background: #f5f5f5; border-radius: 12px; margin-bottom: 12px; }
+    .chat-message { margin-bottom: 12px; padding: 8px 12px; border-radius: 12px; max-width: 70%; word-wrap: break-word; }
+    .chat-message.sent { background: #DCF8C6; margin-left: auto; text-align: right; }
+    .chat-message.received { background: white; }
+    .chat-time { font-size: 10px; color: #666; margin-top: 4px; }
+    .unread-badge { background: #25D366; color: white; padding: 2px 6px; border-radius: 10px; font-size: 10px; margin-left: 8px; }
+    .location-option { padding: 12px; border: 2px solid #e0e0e0; border-radius: 12px; margin-bottom: 8px; cursor: pointer; transition: all 0.3s; }
+    .location-option:hover { border-color: #FF6B3D; background: #FFF5F2; }
+    .location-option.selected { border-color: #FF6B3D; background: #FFF5F2; }
+    .pickup-btn { padding: 12px 16px; border: 2px solid #e0e0e0; border-radius: 12px; background: white; cursor: pointer; transition: all 0.3s; font-size: 14px; font-weight: 500; }
+    .pickup-btn:hover { border-color: #FF6B3D; background: #FFF5F2; }
+    .pickup-btn.selected { border-color: #FF6B3D; background: #FFF5F2; }
+    .loading-spinner { border: 3px solid #f3f3f3; border-top: 3px solid #FF6B3D; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 20px auto; }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+<!-- Welcome Screen -->
+<div class="min-h-screen flex items-center justify-center p-4" id="welcome-screen">
+<div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md text-center">
+<div class="w-24 h-24 bg-orange-500 rounded-full mx-auto mb-4 flex items-center justify-center">
+<span class="text-4xl">❤️</span>
+</div>
+<h1 class="text-5xl font-bold mb-3" style="color: #1E3A5F;">seva</h1>
+<p class="text-lg text-gray-600 mb-8">Nourish. Connect. Share.</p>
+<div class="space-y-4">
+<button class="btn-primary" onclick="showLogin()">Login</button>
+<button class="btn-secondary" onclick="showRegister()">Join Now</button>
+</div>
+</div>
+</div>
+<!-- Login Screen -->
+<div class="hide min-h-screen flex items-center justify-center p-4" id="login-screen">
+<div class="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
+<button class="text-gray-600 mb-6" onclick="backToWelcome()">← Back</button>
+<h2 class="text-3xl font-bold mb-6" style="color: #1E3A5F;">Login</h2>
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-semibold mb-2">Mobile Number *</label>
+<input class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-orange-400 outline-none" id="login-phone" maxlength="10" placeholder="9876543210" type="tel"/>
+</div>
+<button class="btn-primary" id="login-btn" onclick="login()">Login</button>
+<div class="hide" id="login-loading">
+<div class="loading-spinner"></div>
+<p class="text-center text-gray-600 text-sm">Logging in...</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Register Screen -->
+<div class="hide min-h-screen p-4 overflow-y-auto" id="register-screen">
+<div class="max-w-md mx-auto bg-white rounded-3xl shadow-2xl p-8 my-8">
+<button class="text-gray-600 mb-6" onclick="backToWelcome()">← Back</button>
+<h2 class="text-3xl font-bold mb-6" style="color: #1E3A5F;">Create Account</h2>
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-semibold mb-2">I am a: *</label>
+<select class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-orange-400 outline-none" id="reg-role" onchange="toggleRegistrationFields()">
+<option value="donor">Donor (I have food to donate)</option>
+<option value="volunteer">Volunteer (I can deliver food)</option>
+<option value="beneficiary">Beneficiary (I need food)</option>
+</select>
+</div>
+<div class="hide" id="beneficiary-type-field">
+<label class="block text-sm font-semibold mb-2">Beneficiary Type:</label>
+<select class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-orange-400 outline-none" id="beneficiary-type">
+<option value="individual">Individual/Family</option>
+<option value="ngo">NGO</option>
+<option value="community_center">Community Center</option>
+<option value="shelter">Shelter</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-semibold mb-2">Full Name *</label>
+<input class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-orange-400 outline-none" id="reg-name" placeholder="Your Name" type="text"/>
+</div>
+<div>
+<label class="block text-sm font-semibold mb-2"><span id="phone-label">Mobile Number *</span></label>
+<input class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-orange-400 outline-none" id="reg-phone" maxlength="10" placeholder="9876543210" type="tel"/>
+</div>
+<div>
+<label class="block text-sm font-semibold mb-2">Select Your Location *</label>
+<button class="w-full p-3 border-2 border-gray-200 rounded-xl hover:border-orange-400 text-left transition" onclick="showLocationPicker('registration')" type="button">
+<span id="location-text">📍 Set Your Location</span>
+</button>
+<input id="reg-lat" type="hidden"/>
+<input id="reg-lng" type="hidden"/>
+<input id="reg-address" type="hidden"/>
+</div>
+<div>
+<label class="block text-sm font-semibold mb-2">Username *</label>
+<input class="w-full p-3 border-2 border-gray-200 rounded-xl focus:border-orange-400 outline-none" id="reg-username" placeholder="Choose a username" type="text"/>
+</div>
+<button class="btn-primary" onclick="register()">Create Account</button>
+</div>
+</div>
+</div>
+<!-- Location Modal -->
+<div class="hide fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" id="location-modal">
+<div class="bg-white rounded-2xl p-4 w-full max-w-2xl" style="max-height: 85vh;">
+<div class="flex justify-between items-center mb-3">
+<h2 class="text-xl font-bold" style="color: #1E3A5F;">Select Location</h2>
+<button class="text-2xl text-gray-400" onclick="closeLocationPicker()">×</button>
+</div>
+<button class="w-full p-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600 mb-3" onclick="useCurrentLocation()">
+        📍 Use Current Location (High Accuracy)
+      </button>
+<div id="location-map" style="height: 300px; width: 100%; border-radius: 12px; margin-bottom: 12px;"></div>
+<div class="text-sm text-gray-600 mb-2" id="location-status"></div>
+<button class="btn-primary" disabled="" id="confirm-location-btn" onclick="confirmLocation()">
+        ✅ Confirm Location
+      </button>
+</div>
+</div>
+<!-- Chat Modal -->
+<div class="hide fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" id="chat-modal">
+<div class="bg-white rounded-2xl p-4 w-full max-w-md" style="max-height: 85vh; display: flex; flex-direction: column;">
+<div class="flex justify-between items-center mb-3">
+<h2 class="text-xl font-bold" id="chat-user-name" style="color: #1E3A5F;">Chat</h2>
+<button class="text-2xl text-gray-400" onclick="closeChatModal()">×</button>
+</div>
+<div class="chat-container flex-1" id="chat-messages"></div>
+<div class="flex gap-2">
+<input class="flex-1 p-3 border-2 border-gray-200 rounded-xl outline-none" id="chat-input" onkeypress="if(event.key==='Enter') sendMessage()" placeholder="Type a message..." type="text"/>
+<button class="bg-blue-500 text-white px-4 rounded-xl" onclick="sendMessage()">Send</button>
+</div>
+</div>
+</div>
+<!-- Beneficiary Selection Modal -->
+<div class="hide fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" id="beneficiary-modal">
+<div class="bg-white rounded-2xl p-4 w-full max-w-2xl" style="max-height: 85vh; overflow-y: auto;">
+<div class="flex justify-between items-center mb-3">
+<h2 class="text-xl font-bold" style="color: #1E3A5F;">Choose Beneficiary</h2>
+<button class="text-2xl text-gray-400" onclick="closeBeneficiaryModal()">×</button>
+</div>
+<div class="space-y-2" id="beneficiary-list-modal"></div>
+<div class="flex gap-3 mt-3">
+<button class="flex-1 btn-secondary" onclick="closeBeneficiaryModal()">Cancel</button>
+<button class="flex-1 btn-primary" disabled="" id="confirm-beneficiary-btn" onclick="confirmBeneficiarySelection()">Accept Donation</button>
+</div>
+</div>
+</div>
+<!-- Main App -->
+<div class="hide min-h-screen pb-20" id="main-app">
+<header class="p-4 sticky top-0 z-50 shadow-lg" style="background: #1E3A5F; color: white;">
+<div class="flex items-center justify-between max-w-6xl mx-auto">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 bg-white rounded-full flex items-center justify-center text-2xl">❤️</div>
+<div>
+<h2 class="font-bold text-lg" id="user-name">Welcome</h2>
+<p class="text-xs opacity-90" id="user-role">User</p>
+</div>
+</div>
+<button class="text-sm bg-white/20 px-4 py-2 rounded-full" onclick="logout()">Logout</button>
+</div>
+</header>
+<div class="max-w-6xl mx-auto p-4">
+<div class="grid grid-cols-3 gap-3 mb-6">
+<div class="card text-center p-3">
+<div class="text-2xl font-bold text-orange-600" id="stat-donations">0</div>
+<div class="text-xs text-gray-600">Donations</div>
+</div>
+<div class="card text-center p-3">
+<div class="text-2xl font-bold text-green-600" id="stat-deliveries">0</div>
+<div class="text-xs text-gray-600">Deliveries</div>
+</div>
+<div class="card text-center p-3">
+<div class="text-2xl font-bold text-blue-600" id="stat-benefited">0</div>
+<div class="text-xs text-gray-600">People Served</div>
+</div>
+</div>
+<div class="reward-card p-4 mb-6 rounded-xl">
+<div class="flex items-center justify-between">
+<div>
+<div class="text-sm opacity-90">Total Rewards</div>
+<div class="text-3xl font-bold" id="total-rewards">0</div>
+<div class="text-xs opacity-75">points earned</div>
+</div>
+<div class="text-5xl">🏆</div>
+</div>
+</div>
+<div id="content-area"></div>
+</div>
+<nav class="fixed bottom-0 left-0 right-0 bg-white border-t shadow-lg">
+<div class="flex justify-around max-w-6xl mx-auto">
+<button class="flex-1 py-4 text-center tab-active relative" id="tab-home" onclick="showTab('home')">
+<div class="text-2xl mb-1">🏠</div>
+<div class="text-xs font-semibold">Home</div>
+</button>
+<button class="flex-1 py-4 text-center text-gray-600 relative" id="tab-nearby" onclick="showTab('nearby')">
+<div class="text-2xl mb-1">📍</div>
+<div class="text-xs">Nearby</div>
+<span class="notification-badge hide" id="nearby-badge">0</span>
+</button>
+<button class="flex-1 py-4 text-center text-gray-600 relative" id="tab-tracking" onclick="showTab('tracking')">
+<div class="text-2xl mb-1">🚚</div>
+<div class="text-xs">Tracking</div>
+</button>
+<button class="flex-1 py-4 text-center text-gray-600" id="tab-history" onclick="showTab('history')">
+<div class="text-2xl mb-1">📜</div>
+<div class="text-xs">History</div>
+</button>
+</div>
+</nav>
+</div>
+<!-- Create Donation Modal -->
+<div class="hide fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" id="create-modal">
+<div class="bg-white rounded-2xl p-6 w-full max-w-md" style="max-height: 85vh; overflow-y: auto;">
+<h2 class="text-2xl font-bold mb-4" style="color: #1E3A5F;">Create Donation</h2>
+<div class="space-y-3">
+<div>
+<label class="block text-sm font-semibold mb-2">Food Type *</label>
+<input class="w-full p-3 border-2 border-gray-200 rounded-xl outline-none" id="food-type" placeholder="e.g., Rice, Dal, Vegetables" type="text"/>
+</div>
+<div>
+<label class="block text-sm font-semibold mb-2">Category *</label>
+<div class="flex gap-4">
+<label class="flex items-center">
+<input checked="" class="mr-2" name="food-category" type="radio" value="veg"/>
+<span class="badge badge-veg">🥬 Veg</span>
+</label>
+<label class="flex items-center">
+<input class="mr-2" name="food-category" type="radio" value="nonveg"/>
+<span class="badge badge-nonveg">🍗 Non-Veg</span>
+</label>
+</div>
+</div>
+<div class="flex gap-2">
+<div class="flex-1">
+<label class="block text-sm font-semibold mb-2">Quantity *</label>
+<input class="w-full p-3 border-2 border-gray-200 rounded-xl outline-none" id="food-quantity" min="1" placeholder="Amount" type="number"/>
+</div>
+<div class="w-32">
+<label class="block text-sm font-semibold mb-2">Unit *</label>
+<select class="w-full p-3 border-2 border-gray-200 rounded-xl outline-none" id="food-unit">
+<option>kg</option>
+<option>plates</option>
+<option>servings</option>
+</select>
+</div>
+</div>
+<div>
+<label class="block text-sm font-semibold mb-2">Expiry Time *</label>
+<input class="w-full p-3 border-2 border-gray-200 rounded-xl outline-none" id="food-expiry" type="datetime-local"/>
+</div>
+<div>
+<label class="block text-sm font-semibold mb-2">Select Beneficiary (optional)</label>
+<select class="w-full p-3 border-2 border-gray-200 rounded-xl outline-none" id="food-beneficiary">
+<option value="">Select beneficiary...</option>
+</select>
+</div>
+<div>
+<label class="block text-sm font-semibold mb-2">Notes</label>
+<textarea class="w-full p-3 border-2 border-gray-200 rounded-xl outline-none" id="food-instructions" placeholder="Any special instructions..." rows="2"></textarea>
+</div>
+<!-- Improved Pickup Location Section -->
+<div>
+<label class="block text-sm font-semibold mb-2">Pickup Location *</label>
+<div class="grid grid-cols-3 gap-2 mb-2">
+<button class="pickup-btn text-center" id="pickup-btn-current" onclick="selectPickupMethod('current')" type="button">
+<div class="text-xl mb-1">📍</div>
+<div class="text-xs">Current</div>
+</button>
+<button class="pickup-btn text-center" id="pickup-btn-saved" onclick="selectPickupMethod('saved')" type="button">
+<div class="text-xl mb-1">📁</div>
+<div class="text-xs">Saved</div>
+</button>
+<button class="pickup-btn text-center" id="pickup-btn-map" onclick="selectPickupMethod('map')" type="button">
+<div class="text-xl mb-1">🗺️</div>
+<div class="text-xs">Map</div>
+</button>
+</div>
+<input id="pickup-lat" type="hidden"/>
+<input id="pickup-lng" type="hidden"/>
+<p class="text-sm text-gray-600 mt-1" id="pickup-location-text"></p>
+<!-- Inline map container (hidden by default) -->
+<div class="hide mt-3" id="inline-pickup-map-container">
+<div id="inline-pickup-map" style="height: 300px; width: 100%; border-radius: 12px; margin-bottom: 12px;"></div>
+<button class="w-full py-2 bg-blue-500 text-white rounded-xl" onclick="confirmInlinePickupLocation()" type="button">
+              ✅ Confirm Map Selection
+            </button>
+</div>
+</div>
+<div class="flex gap-3">
+<button class="flex-1 btn-secondary" onclick="hideCreateDonation()">Cancel</button>
+<button class="flex-1 btn-primary" onclick="submitDonation()">Post</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Delivery Confirmation Modal -->
+<div class="hide fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50" id="delivery-modal">
+<div class="bg-white rounded-2xl p-6 w-full max-w-md">
+<h2 class="text-xl font-bold mb-4" style="color: #1E3A5F;">Complete Delivery</h2>
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-semibold mb-2">People Served *</label>
+<input class="w-full p-3 border-2 border-gray-200 rounded-xl outline-none" id="people-served" min="1" placeholder="Enter count" type="number"/>
+</div>
+<div class="flex gap-3">
+<button class="flex-1 btn-secondary" onclick="closeDeliveryModal()">Cancel</button>
+<button class="flex-1 btn-primary" onclick="submitDelivery()">Confirm ✓</button>
+</div>
+</div>
+</div>
+</div>
+<!-- Scripts -->
+
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+
+// ---- Combined script block ----
+
+// -----------------------------
+    // Config
+    // -----------------------------
+    const SUPABASE_URL = 'https://omuyruiycynnbbnxnwrh.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9tdXlydWl5Y3lubmJibnhud3JoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjAyNTcyODQsImV4cCI6MjA3NTgzMzI4NH0.BgcqOomSxZCUwPhW8BkOjbMdXg67xGyG1PYUo21_TYg';
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    // -----------------------------
+    // State
+    // -----------------------------
+    let currentUser = null;
+    let locationMap = null;
+    let locationMarker = null;
+    let selectedLocation = null;
+    let currentChatUser = null;
+    let chatSubscription = null;
+    let locationModalType = 'registration';
+    let currentAcceptingDonationId = null;
+    let chosenBeneficiaryId = null;
+    let trackingMaps = {};
+    let inlinePickupMap = null;
+    let inlinePickupMarker = null;
+    let selectedPickupLocation = null;
+    let unreadMessages = {};
+    let messageSubscriptions = [];
+
+    // -----------------------------
+    // Utilities
+    // -----------------------------
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      if (!lat1 || !lon1 || !lat2 || !lon2) return Infinity;
+      const R = 6371;
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    function formatDistance(km) {
+      if (!isFinite(km)) return 'N/A';
+      if (km < 0.001) return `${Math.round(km * 1000000)}mm`;
+      if (km < 1) return `${Math.round(km * 1000)}m`;
+      return `${km.toFixed(2)}km`;
+    }
+
+    function formatPhoneNumber(phone) {
+      if (!phone) return '';
+      let cleaned = phone.replace(/\D/g, '');
+      if (cleaned.length === 10) cleaned = '91' + cleaned;
+      if (!cleaned.startsWith('+')) cleaned = '+' + cleaned;
+      return cleaned;
+    }
+
+    // -----------------------------
+    // Initialization
+    // -----------------------------
+    window.onload = async () => {
+      setupPhoneValidation();
+      const savedUserId = window.localStorage.getItem('seva_user_id');
+      if (savedUserId) {
+        try {
+          await loadUserData(savedUserId);
+          showMainApp();
+        } catch (error) {
+          console.error('Failed to load saved user:', error);
+          window.localStorage.removeItem('seva_user_id');
+        }
+      }
+    };
+
+    function setupPhoneValidation() {
+      document.querySelectorAll('input[type="tel"]').forEach(input => {
+        input.addEventListener('input', (e) => {
+          let value = e.target.value.replace(/\D/g, '');
+          if (value.length > 10) value = value.slice(0, 10);
+          e.target.value = value;
+        });
+      });
+    }
+
+    // -----------------------------
+    // Registration & Login
+    // -----------------------------
+    function toggleRegistrationFields() {
+      const role = document.getElementById('reg-role').value;
+      const benTypeField = document.getElementById('beneficiary-type-field');
+      const phoneLabel = document.getElementById('phone-label');
+
+      if (role === 'beneficiary') {
+        benTypeField.classList.remove('hide');
+        phoneLabel.textContent = 'Mobile Number (Optional)';
+      } else {
+        benTypeField.classList.add('hide');
+        phoneLabel.textContent = 'Mobile Number *';
+      }
+    }
+
+    async function register() {
+      const name = document.getElementById('reg-name').value.trim();
+      const phone = document.getElementById('reg-phone').value.trim();
+      const username = document.getElementById('reg-username').value.trim();
+      const role = document.getElementById('reg-role').value;
+      const latStr = document.getElementById('reg-lat').value;
+      const lngStr = document.getElementById('reg-lng').value;
+
+      if (!name || !username || !latStr || !lngStr) {
+        alert('Please fill all required fields');
+        return;
+      }
+
+      const lat = parseFloat(latStr);
+      const lng = parseFloat(lngStr);
+      if (isNaN(lat) || isNaN(lng)) {
+        alert('Invalid location coordinates');
+        return;
+      }
+
+      const formattedPhone = phone ? formatPhoneNumber(phone) : null;
+
+      try {
+        const userId = crypto.randomUUID();
+        const { error } = await supabase.from('users').insert({
+          id: userId,
+          full_name: name,
+          phone: formattedPhone,
+          username: username,
+          role: role,
+          location: `POINT(${lng} ${lat})`,
+          location_lat: lat,
+          location_lng: lng,
+          address: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+          verified: true,
+          is_active: true,
+          created_at: new Date().toISOString()
+        });
+
+        if (error) throw error;
+
+        if (role === 'beneficiary') {
+          await supabase.from('beneficiaries').insert({
+            user_id: userId,
+            beneficiary_type: document.getElementById('beneficiary-type')?.value || 'individual',
+            organization_name: name,
+            capacity: 50,
+            is_accepting_deliveries: true,
+            created_at: new Date().toISOString()
+          });
+        }
+
+        window.localStorage.setItem('seva_user_id', userId);
+        alert('Registration successful! 🎉');
+        await loadUserData(userId);
+        showMainApp();
+      } catch (error) {
+        alert('Registration failed: ' + (error.message || error));
+        console.error(error);
+      }
+    }
+
+    async function login() {
+      const phone = document.getElementById('login-phone').value.trim();
+      if (!phone) {
+        alert('Please enter mobile number');
+        return;
+      }
+
+      const loginBtn = document.getElementById('login-btn');
+      const loginLoading = document.getElementById('login-loading');
+      
+      loginBtn.classList.add('hide');
+      loginLoading.classList.remove('hide');
+
+      try {
+        const formattedPhone = formatPhoneNumber(phone);
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('phone', formattedPhone)
+          .maybeSingle();
+
+        if (error) throw error;
+        
+        if (!data) {
+          alert('Mobile number not found. Please register first.');
+          return;
+        }
+
+        window.localStorage.setItem('seva_user_id', data.id);
+        await loadUserData(data.id);
+        showMainApp();
+      } catch (error) {
+        alert('Login failed: ' + (error.message || error));
+        console.error(error);
+      } finally {
+        loginBtn.classList.remove('hide');
+        loginLoading.classList.add('hide');
+      }
+    }
+
+    async function loadUserData(userId) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*, beneficiaries(*)')
+        .eq('id', userId)
+        .single();
+
+      if (error) throw error;
+      currentUser = data;
+      await updateUserStats();
+      await loadUnreadMessages();
+      subscribeToAllMessages();
+    }
+
+    async function updateUserStats() {
+      if (!currentUser) return;
+
+      const { count: donationsCount } = await supabase
+        .from('donations')
+        .select('*', { count: 'exact', head: true })
+        .eq('donor_id', currentUser.id);
+
+      const { count: deliveriesCount } = await supabase
+        .from('donations')
+        .select('*', { count: 'exact', head: true })
+        .eq('volunteer_id', currentUser.id)
+        .eq('status', 'delivered');
+
+      const { data: donations } = await supabase
+        .from('donations')
+        .select('actual_people_served')
+        .or(`donor_id.eq.${currentUser.id},volunteer_id.eq.${currentUser.id}`)
+        .eq('status', 'delivered');
+
+      const totalBenefited = donations?.reduce((sum, d) => sum + (d.actual_people_served || 0), 0) || 0;
+      const totalRewards = (donationsCount || 0) * 10 + (deliveriesCount || 0) * 15 + (totalBenefited * 2);
+
+      document.getElementById('stat-donations').textContent = donationsCount || 0;
+      document.getElementById('stat-deliveries').textContent = deliveriesCount || 0;
+      document.getElementById('stat-benefited').textContent = totalBenefited;
+      document.getElementById('total-rewards').textContent = totalRewards;
+
+      currentUser.stats = {
+        donations: donationsCount || 0,
+        deliveries: deliveriesCount || 0,
+        benefited: totalBenefited,
+        rewards: totalRewards
+      };
+    }
+
+    function showMainApp() {
+      document.getElementById('welcome-screen').classList.add('hide');
+      document.getElementById('login-screen').classList.add('hide');
+      document.getElementById('register-screen').classList.add('hide');
+      document.getElementById('main-app').classList.remove('hide');
+
+      document.getElementById('user-name').textContent = currentUser.full_name;
+      document.getElementById('user-role').textContent = currentUser.role ? currentUser.role.charAt(0).toUpperCase() + currentUser.role.slice(1) : 'User';
+      loadHomeContent();
+    }
+
+    function showLogin() {
+      document.getElementById('welcome-screen').classList.add('hide');
+      document.getElementById('login-screen').classList.remove('hide');
+    }
+
+    function showRegister() {
+      document.getElementById('welcome-screen').classList.add('hide');
+      document.getElementById('register-screen').classList.remove('hide');
+    }
+
+    function backToWelcome() {
+      document.getElementById('login-screen').classList.add('hide');
+      document.getElementById('register-screen').classList.add('hide');
+      document.getElementById('welcome-screen').classList.remove('hide');
+    }
+
+    async function logout() {
+      if (confirm('Logout?')) {
+        messageSubscriptions.forEach(sub => {
+          try { sub.unsubscribe(); } catch(e) {}
+        });
+        messageSubscriptions = [];
+        window.localStorage.removeItem('seva_user_id');
+        location.reload();
+      }
+    }
+
+    // -----------------------------
+    // Unread Messages & Notifications
+    // -----------------------------
+    async function loadUnreadMessages() {
+      if (!currentUser) return;
+      
+      const { data } = await supabase
+        .from('messages')
+        .select('sender_id, room_id, is_read')
+        .eq('receiver_id', currentUser.id)
+        .eq('is_read', false);
+
+      if (data) {
+        unreadMessages = {};
+        data.forEach(msg => {
+          if (!unreadMessages[msg.sender_id]) {
+            unreadMessages[msg.sender_id] = 0;
+          }
+          unreadMessages[msg.sender_id]++;
+        });
+      }
+    }
+
+    function subscribeToAllMessages() {
+      if (!currentUser) return;
+
+      const subscription = supabase
+        .channel('all_messages')
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages', filter: `receiver_id=eq.${currentUser.id}` },
+          (payload) => {
+            const senderId = payload.new.sender_id;
+            if (!unreadMessages[senderId]) {
+              unreadMessages[senderId] = 0;
+            }
+            unreadMessages[senderId]++;
+            updateChatNotifications();
+          }
+        )
+        .subscribe();
+
+      messageSubscriptions.push(subscription);
+    }
+
+    function updateChatNotifications() {
+      // Update all chat buttons with unread badges
+      document.querySelectorAll('.btn-chat').forEach(btn => {
+        const userId = btn.getAttribute('data-user-id');
+        const existingBadge = btn.querySelector('.notification-badge');
+        
+        if (userId && unreadMessages[userId] > 0) {
+          if (!existingBadge) {
+            const badge = document.createElement('span');
+            badge.className = 'notification-badge';
+            badge.textContent = unreadMessages[userId];
+            badge.style.position = 'absolute';
+            badge.style.top = '-5px';
+            badge.style.right = '-5px';
+            btn.style.position = 'relative';
+            btn.appendChild(badge);
+          } else {
+            existingBadge.textContent = unreadMessages[userId];
+          }
+        } else if (existingBadge) {
+          existingBadge.remove();
+        }
+      });
+    }
+
+    // -----------------------------
+    // Tabs & Content loaders
+    // -----------------------------
+    function showTab(tab) {
+      document.querySelectorAll('[id^="tab-"]').forEach(t => {
+        t.classList.remove('tab-active');
+        t.classList.add('text-gray-600');
+      });
+
+      const tabBtn = document.getElementById('tab-' + tab);
+      if (tabBtn) {
+        tabBtn.classList.add('tab-active');
+        tabBtn.classList.remove('text-gray-600');
+      }
+
+      if (tab === 'home') loadHomeContent();
+      else if (tab === 'nearby') loadNearbyContent();
+      else if (tab === 'tracking') loadTrackingContent();
+      else if (tab === 'history') loadHistoryContent();
+    }
+
+    function loadHomeContent() {
+      const content = document.getElementById('content-area');
+
+      if (!currentUser) {
+        content.innerHTML = '<div class="card text-center">Please login to see content.</div>';
+        return;
+      }
+
+      if (currentUser.role === 'donor') {
+        content.innerHTML = `
+          <button onclick="showCreateDonation()" style="background: #FF6B3D;" class="text-white py-4 rounded-2xl font-semibold mb-6 shadow-lg w-full">
+            <span class="text-2xl">+</span> Post New Donation
+          </button>
+          <h3 class="text-lg font-bold mb-3">Your Active Donations</h3>
+          <div id="donor-list"></div>
+        `;
+        loadDonorDonations();
+      } else if (currentUser.role === 'volunteer') {
+        content.innerHTML = `
+          <div class="card" style="background: #FF6B3D; color: white;">
+            <h3 class="text-xl font-bold">🚚 Ready to Deliver?</h3>
+            <p class="text-sm opacity-90 mt-2">Check "Nearby" tab for available donations</p>
+          </div>
+          <h3 class="text-lg font-bold mb-3 mt-4">Your Active Deliveries</h3>
+          <div id="volunteer-list"></div>
+        `;
+        loadVolunteerDeliveries();
+      } else {
+        content.innerHTML = `
+          <div class="card" style="background: linear-gradient(135deg, #4CAF50 0%, #2E7D32 100%); color: white;">
+            <h3 class="text-xl font-bold">📦 Incoming Deliveries</h3>
+            <p class="text-sm opacity-90 mt-2">Track your food donations</p>
+          </div>
+          <div id="beneficiary-list" class="mt-4"></div>
+        `;
+        loadBeneficiaryDeliveries();
+      }
+    }
+
+    async function loadDonorDonations() {
+      const { data } = await supabase
+        .from('donations')
+        .select('*, volunteers:users!volunteer_id(full_name, phone), beneficiaries:beneficiaries(*, users!inner(full_name))')
+        .eq('donor_id', currentUser.id)
+        .in('status', ['posted', 'accepted', 'picked_up'])
+        .order('created_at', { ascending: false });
+
+      const container = document.getElementById('donor-list');
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="card text-center text-gray-400">No active donations</div>';
+        return;
+      }
+
+      container.innerHTML = data.map(d => `
+        <div class="card">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h4 class="font-bold text-lg">${escapeHtml(d.food_type || '')}</h4>
+              <span class="badge badge-posted">${(d.status || '').replace('_', ' ').toUpperCase()}</span>
+            </div>
+            <span class="${d.is_veg ? 'badge badge-veg' : 'badge badge-nonveg'}">${d.is_veg ? '🥬' : '🍗'}</span>
+          </div>
+          <p class="text-sm text-gray-600 mb-1">📦 ${d.quantity} ${d.unit}</p>
+          <p class="text-sm text-gray-600 mb-2">⏰ Expires: ${d.expires_at ? new Date(d.expires_at).toLocaleString() : 'N/A'}</p>
+          ${d.beneficiaries ? `<p class="text-sm text-purple-600">🏠 To: ${escapeHtml(d.beneficiaries.users.full_name || '')}</p>` : ''}
+          ${d.volunteers ? `<p class="text-sm text-blue-600">🚚 Volunteer: ${escapeHtml(d.volunteers.full_name || '')}</p>` : '<p class="text-sm text-orange-600">⏳ Waiting for volunteer...</p>'}
+        </div>
+      `).join('');
+    }
+
+    async function loadVolunteerDeliveries() {
+  const { data } = await supabase
+    .from('donations')
+    .select('*, donors:users!donor_id(id, full_name, phone, location_lat, location_lng), beneficiaries:beneficiaries(*, users!inner(id, full_name, phone, location_lat, location_lng))')
+    .eq('volunteer_id', currentUser.id)
+    .in('status', ['accepted', 'picked_up'])
+    .order('created_at', { ascending: false });
+
+  const container = document.getElementById('volunteer-list');
+  if (!data || data.length === 0) {
+    container.innerHTML = '<div class="card text-center text-gray-400">No active deliveries</div>';
+    return;
+  }
+
+  container.innerHTML = data.map(d => {
+    const distance = calculateDistance(
+      currentUser.location_lat, currentUser.location_lng,
+      d.donors?.location_lat, d.donors?.location_lng
+    );
+
+    // unread messages for donor and beneficiary (if present)
+    const unreadDonor = d.donors?.id ? (unreadMessages[d.donors.id] || 0) : 0;
+    const beneficiaryUserId = d.beneficiaries?.users?.id || d.beneficiaries?.id || null;
+    const unreadBeneficiary = beneficiaryUserId ? (unreadMessages[beneficiaryUserId] || 0) : 0;
+
+    // beneficiary display name
+    const beneficiaryName = d.beneficiaries?.users?.full_name || d.beneficiaries?.organization_name || '';
+
+    return `
+    <div class="card">
+      <div class="flex justify-between items-start mb-2">
+        <div>
+          <h4 class="font-bold">${escapeHtml(d.food_type || '')}</h4>
+          <span class="distance-badge">📍 ${formatDistance(distance)}</span>
+        </div>
+        <span class="badge badge-accepted">${(d.status || '').replace('_', ' ').toUpperCase()}</span>
+      </div>
+      <p class="text-sm text-gray-600 mb-2">📦 ${d.quantity} ${d.unit}</p>
+      <p class="text-sm text-blue-600 mb-2">👤 ${escapeHtml(d.donors?.full_name || 'Donor')} • ${escapeHtml(d.donors?.phone || '')}</p>
+      ${d.beneficiaries ? `<p class="text-sm text-purple-600 mb-2">🏠 To: ${escapeHtml(beneficiaryName)}</p>` : ''}
+
+      <div class="flex gap-2 mb-2">
+        <!-- Chat with Donor (always available to volunteer) -->
+        <button onclick="openChat('${d.donors?.id || ''}', '${escapeHtml(d.donors?.full_name || '')}')" data-user-id="${d.donors?.id || ''}" class="btn-chat flex-1">
+          💬 Chat Donor ${unreadDonor > 0 ? `<span class="unread-badge">${unreadDonor}</span>` : ''}
+        </button>
+
+        <!-- Chat with Beneficiary: only shown when a beneficiary is assigned AND delivery is accepted -->
+        ${d.beneficiaries && (d.status === 'accepted' || d.status === 'picked_up') ? `
+          <button onclick="openChat('${beneficiaryUserId}', '${escapeHtml(beneficiaryName)}')" data-user-id="${beneficiaryUserId}" class="btn-chat flex-1">
+            💬 Chat Beneficiary ${unreadBeneficiary > 0 ? `<span class="unread-badge">${unreadBeneficiary}</span>` : ''}
+          </button>
+        ` : ''}
+      </div>
+
+      ${d.status === 'accepted' ? `
+        <button onclick="updateStatus('${d.id}', 'picked_up')" class="w-full py-2 rounded-lg mb-2" style="background: #2196F3; color: white;">
+          📦 Mark as Picked Up
+        </button>
+      ` : ''}
+      <button onclick="completeDelivery('${d.id}')" class="w-full py-2 rounded-lg" style="background: #4CAF50; color: white;">
+        ✓ Complete Delivery
+      </button>
+    </div>
+    `;
+  }).join('');
+
+  updateChatNotifications();
+}
+    async function loadBeneficiaryDeliveries() {
+      const beneficiaryId = currentUser.beneficiaries?.[0]?.id;
+      if (!beneficiaryId) {
+        document.getElementById('beneficiary-list').innerHTML = '<div class="card text-center text-gray-400">Profile not found</div>';
+        return;
+      }
+
+      const { data } = await supabase
+        .from('donations')
+        .select('*, volunteers:users!volunteer_id(id, full_name, phone), donors:users!donor_id(id, full_name)')
+        .eq('beneficiary_id', beneficiaryId)
+        .in('status', ['posted', 'accepted', 'picked_up'])
+        .order('created_at', { ascending: false});
+
+      const container = document.getElementById('beneficiary-list');
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="card text-center text-gray-400">No incoming deliveries</div>';
+        return;
+      }
+
+      container.innerHTML = data.map(d => {
+        const volunteerUnread = d.volunteers?.id ? (unreadMessages[d.volunteers.id] || 0) : 0;
+        const donorUnread = d.donors?.id ? (unreadMessages[d.donors.id] || 0) : 0;
+        return `
+        <div class="card">
+          <h4 class="font-bold text-lg mb-2">${escapeHtml(d.food_type || '')}</h4>
+          <span class="badge badge-posted">${(d.status || '').replace('_', ' ').toUpperCase()}</span>
+          <p class="text-sm text-gray-600 mt-2">📦 ${d.quantity} ${d.unit}</p>
+          <p class="text-sm text-blue-600">👤 From: ${escapeHtml(d.donors?.full_name || '')}</p>
+          ${d.volunteers ? `
+            <p class="text-sm text-green-600">🚚 ${escapeHtml(d.volunteers.full_name || '')} • ${escapeHtml(d.volunteers.phone || '')}</p>
+            <button onclick="openChat('${d.volunteers.id}', '${escapeHtml(d.volunteers.full_name || '')}')" data-user-id="${d.volunteers.id}" class="btn-chat w-full mt-3">
+              💬 Chat with Volunteer ${volunteerUnread > 0 ? `<span class="unread-badge">${volunteerUnread}</span>` : ''}
+            </button>
+          ` : '<p class="text-sm text-orange-600">⏳ Waiting for volunteer...</p>'}
+          <p class="text-sm text-gray-500 mt-2">Created: ${d.created_at ? new Date(d.created_at).toLocaleString() : 'N/A'}</p>
+        </div>
+      `;
+      }).join('');
+      updateChatNotifications();
+    }
+
+    // NEARBY TAB
+    async function loadNearbyContent() {
+      const content = document.getElementById('content-area');
+
+      if (!currentUser) {
+        content.innerHTML = '<div class="card text-center">Please login to see nearby content.</div>';
+        return;
+      }
+
+      if (currentUser.role === 'volunteer') {
+        content.innerHTML = `
+          <h3 class="text-lg font-bold mb-3">🍲 Available Donations Nearby</h3>
+          <div id="nearby-donations"></div>
+        `;
+        await loadNearbyDonations();
+      } else if (currentUser.role === 'donor') {
+        content.innerHTML = `
+          <h3 class="text-lg font-bold mb-3">🚚 Volunteers Nearby</h3>
+          <div id="nearby-volunteers"></div>
+          <h3 class="text-lg font-bold mb-3 mt-6">🏠 Beneficiaries Nearby</h3>
+          <div id="nearby-beneficiaries"></div>
+        `;
+        await loadNearbyVolunteers();
+        await loadNearbyBeneficiaries();
+      } else {
+        content.innerHTML = `
+          <h3 class="text-lg font-bold mb-3">🍲 Donations Nearby</h3>
+          <div id="nearby-donations-ben"></div>
+          <h3 class="text-lg font-bold mb-3 mt-6">🚚 Volunteers Nearby</h3>
+          <div id="nearby-volunteers-ben"></div>
+        `;
+        await loadNearbyDonationsForBeneficiary();
+        await loadNearbyVolunteersForBeneficiary();
+      }
+    }
+
+    async function loadNearbyDonations() {
+      const { data } = await supabase
+        .from('donations')
+        .select('*, donors:users!donor_id(id, full_name, phone, location_lat, location_lng), beneficiaries:beneficiaries(*, users!inner(id, full_name, location_lat, location_lng))')
+        .eq('status', 'posted')
+        .order('created_at', { ascending: false });
+
+      const container = document.getElementById('nearby-donations');
+
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="card text-center text-gray-400">No donations available</div>';
+        document.getElementById('nearby-badge').classList.add('hide');
+        return;
+      }
+
+      const sortedData = data.map(d => {
+        const distance = calculateDistance(
+          currentUser.location_lat, currentUser.location_lng,
+          d.donors?.location_lat, d.donors?.location_lng
+        );
+        return { ...d, distance };
+      }).sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+
+      document.getElementById('nearby-badge').textContent = sortedData.length;
+      document.getElementById('nearby-badge').classList.remove('hide');
+
+      container.innerHTML = sortedData.map(d => {
+        const unread = unreadMessages[d.donors?.id] || 0;
+        return `
+        <div class="card">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h4 class="font-bold text-lg">${escapeHtml(d.food_type || '')}</h4>
+              <span class="distance-badge">📍 ${formatDistance(d.distance)} away</span>
+            </div>
+            <span class="${d.is_veg ? 'badge badge-veg' : 'badge badge-nonveg'}">${d.is_veg ? '🥬 Veg' : '🍗 Non-Veg'}</span>
+          </div>
+          <p class="text-sm text-gray-600 mb-1">📦 ${d.quantity} ${d.unit}</p>
+          <p class="text-sm text-gray-600 mb-2">⏰ Expires: ${d.expires_at ? new Date(d.expires_at).toLocaleString() : 'N/A'}</p>
+          <p class="text-sm text-blue-600 mb-2">👤 ${escapeHtml(d.donors?.full_name || '')} • ${escapeHtml(d.donors?.phone || '')}</p>
+          ${d.beneficiaries ? `<p class="text-sm text-purple-600 mb-2">🏠 To: ${escapeHtml(d.beneficiaries.users.full_name || '')}</p>` : ''}
+          <div class="flex gap-2">
+            <button onclick="openChat('${d.donors?.id || ''}', '${escapeHtml(d.donors?.full_name || '')}')" data-user-id="${d.donors?.id}" class="btn-chat flex-1">
+              💬 Chat ${unread > 0 ? `<span class="unread-badge">${unread}</span>` : ''}
+            </button>
+            <button onclick="acceptDonation('${d.id}', '${d.beneficiaries?.id || ''}')" class="flex-1 py-2 rounded-lg font-semibold" style="background: #FF6B3D; color: white;">
+              Accept →
+            </button>
+          </div>
+        </div>
+      `;
+      }).join('');
+      updateChatNotifications();
+    }
+
+    async function loadNearbyVolunteers() {
+      const { data } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'volunteer')
+        .eq('is_active', true);
+
+      const container = document.getElementById('nearby-volunteers');
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="card text-center text-gray-400">No volunteers nearby</div>';
+        return;
+      }
+
+      const sortedData = data.map(v => {
+        const distance = calculateDistance(
+          currentUser.location_lat, currentUser.location_lng,
+          v.location_lat, v.location_lng
+        );
+        return { ...v, distance };
+      }).sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity)).slice(0, 5);
+
+      container.innerHTML = sortedData.map(v => {
+        const unread = unreadMessages[v.id] || 0;
+        return `
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <h4 class="font-bold">${escapeHtml(v.full_name || '')}</h4>
+              <span class="distance-badge">📍 ${formatDistance(v.distance)}</span>
+              <p class="text-sm text-gray-600 mt-1">🚚 Volunteer</p>
+              <p class="text-sm text-blue-600">📞 ${escapeHtml(v.phone || 'N/A')}</p>
+            </div>
+            <div class="text-3xl">🚚</div>
+          </div>
+          <button onclick="openChat('${v.id}', '${escapeHtml(v.full_name || '')}')" data-user-id="${v.id}" class="btn-chat w-full mt-3">
+            💬 Chat ${unread > 0 ? `<span class="unread-badge">${unread}</span>` : ''}
+          </button>
+        </div>
+      `;
+      }).join('');
+      updateChatNotifications();
+    }
+
+    async function loadNearbyBeneficiaries() {
+      const { data } = await supabase
+        .from('beneficiaries')
+        .select('*, users!inner(id, full_name, phone, location_lat, location_lng)')
+        .eq('is_accepting_deliveries', true);
+
+      const container = document.getElementById('nearby-beneficiaries');
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="card text-center text-gray-400">No beneficiaries nearby</div>';
+        return;
+      }
+
+      const sortedData = data.map(b => {
+        const distance = calculateDistance(
+          currentUser.location_lat, currentUser.location_lng,
+          b.users.location_lat, b.users.location_lng
+        );
+        return { ...b, distance };
+      }).sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity)).slice(0, 5);
+
+      container.innerHTML = sortedData.map(b => {
+        const unread = unreadMessages[b.users.id] || 0;
+        return `
+        <div class="card">
+          <div class="flex justify-between items-start">
+            <div>
+              <h4 class="font-bold">${escapeHtml(b.organization_name || b.users.full_name || '')}</h4>
+              <span class="distance-badge">📍 ${formatDistance(b.distance)}</span>
+              <p class="text-sm text-gray-600 mt-1">🏠 ${escapeHtml(b.beneficiary_type || '')}</p>
+              <p class="text-sm text-blue-600">📞 ${escapeHtml(b.users.phone || 'N/A')}</p>
+            </div>
+            <div class="text-3xl">🏠</div>
+          </div>
+          <button onclick="openChat('${b.users.id}', '${escapeHtml(b.organization_name || b.users.full_name || '')}')" data-user-id="${b.users.id}" class="btn-chat w-full mt-3">
+            💬 Chat ${unread > 0 ? `<span class="unread-badge">${unread}</span>` : ''}
+          </button>
+        </div>
+      `;
+      }).join('');
+      updateChatNotifications();
+    }
+
+    async function loadNearbyDonationsForBeneficiary() {
+      const { data } = await supabase
+        .from('donations')
+        .select('*, donors:users!donor_id(id, full_name, location_lat, location_lng)')
+        .eq('status', 'posted')
+        .order('created_at', { ascending: false })
+        .limit(10);
+
+      const container = document.getElementById('nearby-donations-ben');
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="card text-center text-gray-400">No donations nearby</div>';
+        return;
+      }
+
+      const sortedData = data.map(d => {
+        const distance = calculateDistance(
+          currentUser.location_lat, currentUser.location_lng,
+          d.donors?.location_lat, d.donors?.location_lng
+        );
+        return { ...d, distance };
+      }).sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+
+      container.innerHTML = sortedData.map(d => {
+        const unread = unreadMessages[d.donors?.id] || 0;
+        return `
+        <div class="card">
+          <h4 class="font-bold text-lg mb-2">${escapeHtml(d.food_type || '')}</h4>
+          <span class="distance-badge">📍 ${formatDistance(d.distance)} away</span>
+          <p class="text-sm text-gray-600 mt-2">📦 ${d.quantity} ${d.unit}</p>
+          <p class="text-sm text-blue-600">👤 From: ${escapeHtml(d.donors?.full_name || '')}</p>
+          <button onclick="openChat('${d.donors?.id || ''}', '${escapeHtml(d.donors?.full_name || '')}')" data-user-id="${d.donors?.id}" class="btn-chat w-full mt-3">
+            💬 Chat with Donor ${unread > 0 ? `<span class="unread-badge">${unread}</span>` : ''}
+          </button>
+        </div>
+      `;
+      }).join('');
+      updateChatNotifications();
+    }
+
+    async function loadNearbyVolunteersForBeneficiary() {
+      const { data } = await supabase
+        .from('users')
+        .select('*')
+        .eq('role', 'volunteer')
+        .eq('is_active', true)
+        .limit(5);
+
+      const container = document.getElementById('nearby-volunteers-ben');
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="card text-center text-gray-400">No volunteers nearby</div>';
+        return;
+      }
+
+      const sortedData = data.map(v => {
+        const distance = calculateDistance(
+          currentUser.location_lat, currentUser.location_lng,
+          v.location_lat, v.location_lng
+        );
+        return { ...v, distance };
+      }).sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+
+      container.innerHTML = sortedData.map(v => {
+        const unread = unreadMessages[v.id] || 0;
+        return `
+        <div class="card">
+          <h4 class="font-bold">${escapeHtml(v.full_name || '')}</h4>
+          <span class="distance-badge">📍 ${formatDistance(v.distance)}</span>
+          <p class="text-sm text-gray-600 mt-1">🚚 Volunteer</p>
+          <p class="text-sm text-blue-600">📞 ${escapeHtml(v.phone || 'N/A')}</p>
+          <button onclick="openChat('${v.id}', '${escapeHtml(v.full_name || '')}')" data-user-id="${v.id}" class="btn-chat w-full mt-3">
+            💬 Chat ${unread > 0 ? `<span class="unread-badge">${unread}</span>` : ''}
+          </button>
+        </div>
+      `;
+      }).join('');
+      updateChatNotifications();
+    }
+
+    // -----------------------------
+    // Chat
+    // -----------------------------
+    async function openChat(userId, userName) {
+      currentChatUser = { id: userId, name: userName };
+      document.getElementById('chat-user-name').textContent = userName;
+      document.getElementById('chat-modal').classList.remove('hide');
+      
+      // Mark messages as read
+      if (unreadMessages[userId]) {
+        await markMessagesAsRead(userId);
+        unreadMessages[userId] = 0;
+        updateChatNotifications();
+      }
+      
+      await loadChatMessages();
+      subscribeToChatMessages();
+    }
+
+    async function markMessagesAsRead(senderId) {
+      if (!currentUser || !senderId) return;
+      
+      const roomId = [currentUser.id, senderId].sort().join('_');
+      await supabase
+        .from('messages')
+        .update({ is_read: true })
+        .eq('room_id', roomId)
+        .eq('receiver_id', currentUser.id)
+        .eq('is_read', false);
+    }
+
+    function closeChatModal() {
+      document.getElementById('chat-modal').classList.add('hide');
+      if (chatSubscription) {
+        try { chatSubscription.unsubscribe(); } catch(e) {}
+        chatSubscription = null;
+      }
+      currentChatUser = null;
+    }
+
+    async function loadChatMessages() {
+      if (!currentChatUser || !currentUser) return;
+      const roomId = [currentUser.id, currentChatUser.id].sort().join('_');
+
+      const { data } = await supabase
+        .from('messages')
+        .select('*')
+        .eq('room_id', roomId)
+        .order('created_at', { ascending: true })
+        .limit(50);
+
+      const container = document.getElementById('chat-messages');
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="text-center text-gray-400 text-sm">No messages yet. Start the conversation!</div>';
+        return;
+      }
+
+      container.innerHTML = data.map(msg => `
+        <div class="chat-message ${msg.sender_id === currentUser.id ? 'sent' : 'received'}">
+          <div>${escapeHtml(msg.content || '')}</div>
+          <div class="chat-time">${msg.created_at ? new Date(msg.created_at).toLocaleTimeString() : ''}</div>
+        </div>
+      `).join('');
+
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function subscribeToChatMessages() {
+      if (!currentChatUser || !currentUser) return;
+      const roomId = [currentUser.id, currentChatUser.id].sort().join('_');
+
+      if (chatSubscription) {
+        try { chatSubscription.unsubscribe(); } catch(e) {}
+        chatSubscription = null;
+      }
+
+      chatSubscription = supabase
+        .channel(`chat_${roomId}`)
+        .on('postgres_changes',
+          { event: 'INSERT', schema: 'public', table: 'messages', filter: `room_id=eq.${roomId}` },
+          () => loadChatMessages()
+        )
+        .subscribe();
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('chat-input');
+      const content = input.value.trim();
+
+      if (!content || !currentChatUser || !currentUser) return;
+      const roomId = [currentUser.id, currentChatUser.id].sort().join('_');
+
+      try {
+        await supabase.from('messages').insert({
+          room_id: roomId,
+          sender_id: currentUser.id,
+          receiver_id: currentChatUser.id,
+          content: content,
+          is_read: false,
+          created_at: new Date().toISOString()
+        });
+
+        input.value = '';
+        await loadChatMessages();
+      } catch (error) {
+        alert('Failed to send message');
+        console.error(error);
+      }
+    }
+
+    // -----------------------------
+    // Tracking
+    // -----------------------------
+    async function loadTrackingContent() {
+      const content = document.getElementById('content-area');
+      content.innerHTML = '<div id="tracking-list"></div>';
+
+      let query = supabase
+        .from('donations')
+        .select('*, donors:users!donor_id(full_name, location_lat, location_lng), volunteers:users!volunteer_id(full_name, location_lat, location_lng), beneficiaries:beneficiaries(*, users!inner(full_name, location_lat, location_lng))')
+        .in('status', ['accepted', 'picked_up']);
+
+      if (!currentUser) {
+        content.innerHTML = '<div class="card text-center">Please login to see tracking info.</div>';
+        return;
+      }
+
+      if (currentUser.role === 'donor') {
+        query = query.eq('donor_id', currentUser.id);
+      } else if (currentUser.role === 'volunteer') {
+        query = query.eq('volunteer_id', currentUser.id);
+      } else {
+        query = query.eq('beneficiary_id', currentUser.beneficiaries?.[0]?.id);
+      }
+
+      const { data } = await query.order('created_at', { ascending: false });
+
+      const container = document.getElementById('tracking-list');
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="card text-center text-gray-400">No deliveries in progress</div>';
+        return;
+      }
+
+      container.innerHTML = data.map(d => `
+        <div class="card">
+          <h4 class="font-bold text-lg mb-3">${escapeHtml(d.food_type || '')}</h4>
+
+          <div class="status-tracker">
+            <div class="status-step completed">
+              <div class="status-dot">✓</div>
+              <div class="text-xs">Posted</div>
+            </div>
+            <div class="status-step ${(d.status === 'accepted' || d.status === 'picked_up') ? 'completed' : 'active'}">
+              <div class="status-dot">${(d.status === 'accepted' || d.status === 'picked_up') ? '✓' : '2'}</div>
+              <div class="text-xs">Accepted</div>
+            </div>
+            <div class="status-step ${d.status === 'picked_up' ? 'active' : ''}">
+              <div class="status-dot">${d.status === 'picked_up' ? '✓' : '3'}</div>
+              <div class="text-xs">Picked Up</div>
+            </div>
+            <div class="status-step">
+              <div class="status-dot">4</div>
+              <div class="text-xs">Delivered</div>
+            </div>
+          </div>
+
+          <div id="tracking-map-${d.id}" style="height: 300px; width: 100%; border-radius: 12px; margin: 12px 0;"></div>
+
+          <div class="mt-4 space-y-1">
+            <p class="text-sm text-gray-600">📦 ${d.quantity} ${d.unit}</p>
+            ${d.donors ? `<p class="text-sm text-blue-600">👤 Donor: ${escapeHtml(d.donors.full_name || '')}</p>` : ''}
+            ${d.volunteers ? `<p class="text-sm text-green-600">🚚 Volunteer: ${escapeHtml(d.volunteers.full_name || '')}</p>` : ''}
+            ${d.beneficiaries ? `<p class="text-sm text-purple-600">🏠 To: ${escapeHtml(d.beneficiaries.users.full_name || '')}</p>` : ''}
+            <p class="text-sm text-gray-500">Created: ${d.created_at ? new Date(d.created_at).toLocaleString() : ''}</p>
+          </div>
+        </div>
+      `).join('');
+
+      setTimeout(() => {
+        data.forEach(d => initTrackingMap(d));
+      }, 150);
+    }
+
+    function initTrackingMap(donation) {
+      const mapId = `tracking-map-${donation.id}`;
+      if (trackingMaps[mapId]) {
+        try { trackingMaps[mapId].remove(); } catch(e) {}
+      }
+
+      const donorLat = donation.pickup_lat || donation.donors?.location_lat;
+      const donorLng = donation.pickup_lng || donation.donors?.location_lng;
+      const beneficiaryLat = donation.beneficiaries?.users.location_lat;
+      const beneficiaryLng = donation.beneficiaries?.users.location_lng;
+
+      if (!donorLat || !donorLng || !beneficiaryLat || !beneficiaryLng) return;
+
+      const map = L.map(mapId, { zoomControl: false }).setView([donorLat, donorLng], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+      L.marker([donorLat, donorLng], {
+        icon: L.divIcon({
+          className: 'custom-icon',
+          html: '<div style="background: #2196F3; color: white; padding: 8px; border-radius: 50%; font-size: 20px;">📍</div>'
+        })
+      }).addTo(map).bindPopup('Pickup Location');
+
+      L.marker([beneficiaryLat, beneficiaryLng], {
+        icon: L.divIcon({
+          className: 'custom-icon',
+          html: '<div style="background: #4CAF50; color: white; padding: 8px; border-radius: 50%; font-size: 20px;">🏠</div>'
+        })
+      }).addTo(map).bindPopup('Delivery Location');
+
+      if (donation.volunteers?.location_lat && donation.volunteers?.location_lng) {
+        L.marker([donation.volunteers.location_lat, donation.volunteers.location_lng], {
+          icon: L.divIcon({
+            className: 'custom-icon',
+            html: '<div style="background: #FF6B3D; color: white; padding: 8px; border-radius: 50%; font-size: 20px;">🚚</div>'
+          })
+        }).addTo(map).bindPopup('Volunteer Location');
+      }
+
+      L.polyline([
+        [donorLat, donorLng],
+        [beneficiaryLat, beneficiaryLng]
+      ], {
+        color: '#FF6B3D',
+        weight: 3,
+        opacity: 0.7,
+        dashArray: '10, 5'
+      }).addTo(map);
+
+      map.fitBounds([
+        [donorLat, donorLng],
+        [beneficiaryLat, beneficiaryLng]
+      ], { padding: [50, 50] });
+
+      trackingMaps[mapId] = map;
+    }
+
+    // -----------------------------
+    // HISTORY TAB
+    // -----------------------------
+    async function loadHistoryContent() {
+      const content = document.getElementById('content-area');
+      content.innerHTML = '<h3 class="text-lg font-bold mb-3">📜 Donation History</h3><div id="history-list"></div>';
+
+      let query = supabase
+        .from('donations')
+        .select('*, donors:users!donor_id(full_name), volunteers:users!volunteer_id(full_name)')
+        .eq('status', 'delivered');
+
+      if (currentUser.role === 'donor') {
+        query = query.eq('donor_id', currentUser.id);
+      } else if (currentUser.role === 'volunteer') {
+        query = query.eq('volunteer_id', currentUser.id);
+      } else {
+        query = query.eq('beneficiary_id', currentUser.beneficiaries?.[0]?.id);
+      }
+
+      const { data } = await query.order('delivered_at', { ascending: false }).limit(20);
+
+      const container = document.getElementById('history-list');
+      if (!data || data.length === 0) {
+        container.innerHTML = '<div class="card text-center text-gray-400">No completed deliveries yet</div>';
+        return;
+      }
+
+      container.innerHTML = data.map(d => `
+        <div class="card">
+          <div class="flex justify-between items-start mb-2">
+            <div>
+              <h4 class="font-bold">${escapeHtml(d.food_type || '')}</h4>
+              <span class="badge badge-delivered">✓ DELIVERED</span>
+            </div>
+            <span class="text-xs text-gray-500">${new Date(d.delivered_at || d.created_at).toLocaleDateString()}</span>
+          </div>
+          <p class="text-sm text-gray-600">📦 ${d.quantity} ${d.unit}</p>
+          ${d.actual_people_served ? `<p class="text-sm text-green-600">👥 Served ${d.actual_people_served} people</p>` : ''}
+          ${currentUser.role === 'donor' && d.volunteers ? `<p class="text-sm text-blue-600">🚚 By: ${escapeHtml(d.volunteers.full_name || '')}</p>` : ''}
+          ${currentUser.role === 'volunteer' && d.donors ? `<p class="text-sm text-blue-600">👤 From: ${escapeHtml(d.donors.full_name || '')}</p>` : ''}
+          <p class="text-sm text-gray-400 mt-1">Created: ${d.created_at ? new Date(d.created_at).toLocaleString() : ''}</p>
+        </div>
+      `).join('');
+    }
+
+    // -----------------------------
+    // Donation Actions
+    // -----------------------------
+    function showCreateDonation() {
+      populateBeneficiarySelect();
+      document.getElementById('create-modal').classList.remove('hide');
+      
+      // Reset pickup selection
+      document.querySelectorAll('.pickup-btn').forEach(btn => btn.classList.remove('selected'));
+      document.getElementById('pickup-location-text').textContent = '';
+      document.getElementById('inline-pickup-map-container').classList.add('hide');
+      selectedPickupLocation = null;
+    }
+
+    function hideCreateDonation() {
+      document.getElementById('create-modal').classList.add('hide');
+      if (inlinePickupMap) {
+        try { inlinePickupMap.remove(); } catch(e) {}
+        inlinePickupMap = null;
+      }
+    }
+
+    async function populateBeneficiarySelect() {
+      const sel = document.getElementById('food-beneficiary');
+      sel.innerHTML = '<option value="">Select beneficiary...</option>';
+      try {
+        const { data } = await supabase
+          .from('beneficiaries')
+          .select('*, users!inner(id, full_name)')
+          .eq('is_accepting_deliveries', true)
+          .limit(100);
+        if (data) {
+          data.forEach(b => {
+            const name = b.organization_name || b.users.full_name;
+            const option = document.createElement('option');
+            option.value = b.id;
+            option.textContent = name;
+            sel.appendChild(option);
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load beneficiaries', error);
+      }
+    }
+
+    // -----------------------------
+    // Improved Pickup Location Selection
+    // -----------------------------
+    function selectPickupMethod(method) {
+      document.querySelectorAll('.pickup-btn').forEach(btn => btn.classList.remove('selected'));
+      document.getElementById('pickup-btn-' + method).classList.add('selected');
+      document.getElementById('inline-pickup-map-container').classList.add('hide');
+
+      if (method === 'current') {
+        if (!navigator.geolocation) {
+          alert('Geolocation not supported');
+          return;
+        }
+        document.getElementById('pickup-location-text').textContent = 'Getting current location...';
+        
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            selectedPickupLocation = { lat: position.coords.latitude, lng: position.coords.longitude };
+            document.getElementById('pickup-lat').value = selectedPickupLocation.lat.toString();
+            document.getElementById('pickup-lng').value = selectedPickupLocation.lng.toString();
+            document.getElementById('pickup-location-text').textContent = '📍 Current Location Selected';
+          },
+          (error) => {
+            alert('Error getting location: ' + error.message);
+            document.getElementById('pickup-location-text').textContent = 'Failed to get location';
+          },
+          { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+        );
+      } else if (method === 'saved') {
+        selectedPickupLocation = { lat: currentUser.location_lat, lng: currentUser.location_lng };
+        document.getElementById('pickup-lat').value = selectedPickupLocation.lat || '';
+        document.getElementById('pickup-lng').value = selectedPickupLocation.lng || '';
+        document.getElementById('pickup-location-text').textContent = '📁 Saved Address Selected';
+      } else if (method === 'map') {
+        document.getElementById('inline-pickup-map-container').classList.remove('hide');
+        document.getElementById('pickup-location-text').textContent = 'Click on map to select location';
+        setTimeout(() => initInlinePickupMap(), 150);
+      }
+    }
+
+    function initInlinePickupMap() {
+      if (inlinePickupMap) {
+        try { inlinePickupMap.remove(); } catch(e) {}
+        inlinePickupMap = null;
+      }
+
+      const centerLat = currentUser?.location_lat || 21.1702;
+      const centerLng = currentUser?.location_lng || 72.8311;
+      inlinePickupMap = L.map('inline-pickup-map').setView([centerLat, centerLng], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(inlinePickupMap);
+
+      inlinePickupMap.on('click', function(e) {
+        if (inlinePickupMarker) {
+          try { inlinePickupMap.removeLayer(inlinePickupMarker); } catch(e) {}
+        }
+        inlinePickupMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(inlinePickupMap);
+        selectedPickupLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
+        document.getElementById('pickup-location-text').textContent = `Selected: ${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+      });
+    }
+
+    function confirmInlinePickupLocation() {
+      if (!selectedPickupLocation) {
+        alert('Please select a location on the map');
+        return;
+      }
+      document.getElementById('pickup-lat').value = selectedPickupLocation.lat.toString();
+      document.getElementById('pickup-lng').value = selectedPickupLocation.lng.toString();
+      document.getElementById('inline-pickup-map-container').classList.add('hide');
+      document.getElementById('pickup-location-text').textContent = '🗺️ Map Location Selected';
+    }
+
+    async function submitDonation() {
+      const foodType = document.getElementById('food-type').value.trim();
+      const category = document.querySelector('input[name="food-category"]:checked').value;
+      const quantity = document.getElementById('food-quantity').value;
+      const unit = document.getElementById('food-unit').value;
+      const expiry = document.getElementById('food-expiry').value;
+      const instructions = document.getElementById('food-instructions').value;
+      const pickupLat = document.getElementById('pickup-lat').value;
+      const pickupLng = document.getElementById('pickup-lng').value;
+      const selectedBeneficiary = document.getElementById('food-beneficiary').value || null;
+
+      if (!foodType || !quantity || !expiry || !pickupLat || !pickupLng) {
+        alert('Please fill all required fields including pickup location');
+        return;
+      }
+
+      if (new Date(expiry) <= new Date()) {
+        alert('Expiry time must be in the future');
+        return;
+      }
+
+      try {
+        const { error } = await supabase.from('donations').insert({
+          donor_id: currentUser.id,
+          food_type: foodType,
+          is_veg: category === 'veg',
+          quantity: parseFloat(quantity),
+          unit: unit,
+          expires_at: expiry,
+          pickup_location: `POINT(${parseFloat(pickupLng)} ${parseFloat(pickupLat)})`,
+          pickup_lat: parseFloat(pickupLat),
+          pickup_lng: parseFloat(pickupLng),
+          pickup_address: `${parseFloat(pickupLat).toFixed(6)}, ${parseFloat(pickupLng).toFixed(6)}`,
+          available_from: new Date().toISOString(),
+          available_to: expiry,
+          special_instructions: instructions,
+          status: 'posted',
+          beneficiary_id: selectedBeneficiary || null,
+          created_at: new Date().toISOString()
+        });
+
+        if (error) throw error;
+
+        alert('Donation posted! 🎉 Volunteers will be notified.');
+        hideCreateDonation();
+        await updateUserStats();
+        loadHomeContent();
+      } catch (error) {
+        alert('Failed to post donation: ' + (error.message || error));
+        console.error(error);
+      }
+    }
+
+    async function acceptDonation(donationId, existingBeneficiaryId) {
+      if (!donationId) return;
+      if (existingBeneficiaryId) {
+        if (!confirm('Accept this donation for delivery?')) return;
+
+        try {
+          const { error } = await supabase
+            .from('donations')
+            .update({
+              volunteer_id: currentUser.id,
+              status: 'accepted',
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', donationId)
+            .eq('status', 'posted');
+
+          if (error) throw error;
+
+          alert('Donation accepted! 🎉 Contact the donor to arrange pickup.');
+          await updateUserStats();
+          loadNearbyContent();
+        } catch (error) {
+          alert('Error: ' + (error.message || error));
+          console.error(error);
+        }
+      } else {
+        currentAcceptingDonationId = donationId;
+        await showBeneficiarySelectionModal();
+      }
+    }
+
+    async function showBeneficiarySelectionModal() {
+      try {
+        const { data: beneficiaries } = await supabase
+          .from('beneficiaries')
+          .select('*, users!inner(id, full_name, location_lat, location_lng)')
+          .eq('is_accepting_deliveries', true);
+
+        if (!beneficiaries || beneficiaries.length === 0) {
+          alert('No beneficiaries available. Please try again later.');
+          return;
+        }
+
+        const sortedBeneficiaries = beneficiaries.map(b => {
+          const distance = calculateDistance(
+            currentUser.location_lat, currentUser.location_lng,
+            b.users.location_lat, b.users.location_lng
+          );
+          return { ...b, distance };
+        }).sort((a, b) => (a.distance || Infinity) - (b.distance || Infinity));
+
+        const container = document.getElementById('beneficiary-list-modal');
+        container.innerHTML = sortedBeneficiaries.map(b => `
+          <div class="location-option" id="beneficiary-option-${b.id}" onclick="selectBeneficiary('${b.id}')">
+            <div class="font-semibold">${escapeHtml(b.organization_name || b.users.full_name || '')}</div>
+            <div class="text-sm text-gray-600">${escapeHtml(b.beneficiary_type || '')} • ${formatDistance(b.distance)}</div>
+          </div>
+        `).join('');
+
+        chosenBeneficiaryId = null;
+        document.getElementById('confirm-beneficiary-btn').disabled = true;
+        document.getElementById('beneficiary-modal').classList.remove('hide');
+      } catch (error) {
+        console.error('Failed to load beneficiaries', error);
+        alert('Error loading beneficiaries.');
+      }
+    }
+
+    function selectBeneficiary(id) {
+      chosenBeneficiaryId = id;
+      document.querySelectorAll('#beneficiary-list-modal .location-option').forEach(el => el.classList.remove('selected'));
+      const el = document.getElementById('beneficiary-option-' + id);
+      if (el) el.classList.add('selected');
+      document.getElementById('confirm-beneficiary-btn').disabled = false;
+    }
+
+    function closeBeneficiaryModal() {
+      document.getElementById('beneficiary-modal').classList.add('hide');
+      currentAcceptingDonationId = null;
+      chosenBeneficiaryId = null;
+    }
+
+    async function confirmBeneficiarySelection() {
+      if (!currentAcceptingDonationId || !chosenBeneficiaryId) return;
+      if (!confirm('Confirm acceptance and assign selected beneficiary?')) return;
+
+      try {
+        const { error } = await supabase
+          .from('donations')
+          .update({
+            volunteer_id: currentUser.id,
+            beneficiary_id: chosenBeneficiaryId,
+            status: 'accepted',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', currentAcceptingDonationId)
+          .eq('status', 'posted');
+
+        if (error) throw error;
+
+        alert('Donation accepted and beneficiary assigned!');
+        closeBeneficiaryModal();
+        await updateUserStats();
+        loadNearbyContent();
+      } catch (error) {
+        alert('Error: ' + (error.message || error));
+        console.error(error);
+      }
+    }
+
+    // -----------------------------
+    // Location picker
+    // -----------------------------
+    function showLocationPicker(type = 'registration') {
+      locationModalType = type;
+      document.getElementById('location-modal').classList.remove('hide');
+      setTimeout(() => initLocationMap(), 150);
+    }
+
+    function closeLocationPicker() {
+      document.getElementById('location-modal').classList.add('hide');
+      if (locationMap) {
+        try { locationMap.remove(); } catch(e) {}
+        locationMap = null;
+      }
+      locationMarker = null;
+      selectedLocation = null;
+      document.getElementById('confirm-location-btn').disabled = true;
+      document.getElementById('location-status').textContent = '';
+    }
+
+    function initLocationMap() {
+      if (locationMap) {
+        try { locationMap.remove(); } catch(e) {}
+        locationMap = null;
+      }
+
+      const centerLat = currentUser?.location_lat || 21.1702;
+      const centerLng = currentUser?.location_lng || 72.8311;
+      locationMap = L.map('location-map').setView([centerLat, centerLng], 13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(locationMap);
+
+      locationMap.on('click', function(e) {
+        if (locationMarker) {
+          try { locationMap.removeLayer(locationMarker); } catch(e) {}
+        }
+        locationMarker = L.marker([e.latlng.lat, e.latlng.lng]).addTo(locationMap);
+        selectedLocation = { lat: e.latlng.lat, lng: e.latlng.lng };
+        document.getElementById('confirm-location-btn').disabled = false;
+        document.getElementById('location-status').textContent = `Selected: ${e.latlng.lat.toFixed(6)}, ${e.latlng.lng.toFixed(6)}`;
+      });
+    }
+
+    function useCurrentLocation() {
+      if (!navigator.geolocation) {
+        alert('Geolocation not supported');
+        return;
+      }
+
+      document.getElementById('location-status').textContent = 'Getting high accuracy location...';
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lng = position.coords.longitude;
+          const accuracy = position.coords.accuracy;
+
+          locationMap.setView([lat, lng], 17);
+          if (locationMarker) {
+            try { locationMap.removeLayer(locationMarker); } catch(e) {}
+          }
+          locationMarker = L.marker([lat, lng]).addTo(locationMap);
+
+          L.circle([lat, lng], {
+            radius: accuracy,
+            color: '#2196F3',
+            fillColor: '#2196F3',
+            fillOpacity: 0.2
+          }).addTo(locationMap);
+
+          selectedLocation = { lat, lng };
+          document.getElementById('confirm-location-btn').disabled = false;
+
+          const accuracyText = accuracy < 1000 ? `${Math.round(accuracy)}m` : `${(accuracy/1000).toFixed(2)}km`;
+          document.getElementById('location-status').textContent = `Location found (Accuracy: ${accuracyText})`;
+        },
+        (error) => {
+          alert('Error getting location: ' + error.message);
+          document.getElementById('location-status').textContent = 'Failed to get location';
+        },
+        {
+          enableHighAccuracy: true,
+          timeout: 15000,
+          maximumAge: 0
+        }
+      );
+    }
+
+    function confirmLocation() {
+      if (!selectedLocation) return;
+
+      if (locationModalType === 'registration') {
+        document.getElementById('reg-lat').value = selectedLocation.lat.toString();
+        document.getElementById('reg-lng').value = selectedLocation.lng.toString();
+        document.getElementById('location-text').textContent = '📍 Location Selected';
+      }
+
+      closeLocationPicker();
+    }
+
+    // -----------------------------
+    // Delivery / Status updates
+    // -----------------------------
+    async function updateStatus(donationId, status) {
+      try {
+        const { error } = await supabase
+          .from('donations')
+          .update({ status: status, updated_at: new Date().toISOString() })
+          .eq('id', donationId);
+
+        if (error) throw error;
+        alert('Status updated');
+        loadTrackingContent();
+        loadHomeContent();
+      } catch (error) {
+        alert('Failed to update status');
+        console.error(error);
+      }
+    }
+
+    function completeDelivery(donationId) {
+      document.getElementById('delivery-modal').classList.remove('hide');
+      window.currentDeliveryId = donationId;
+    }
+
+    function closeDeliveryModal() {
+      document.getElementById('delivery-modal').classList.add('hide');
+      window.currentDeliveryId = null;
+      document.getElementById('people-served').value = '';
+    }
+
+    async function submitDelivery() {
+      const count = parseInt(document.getElementById('people-served').value || '0', 10);
+      const donationId = window.currentDeliveryId;
+      if (!donationId || !count || count < 1) {
+        alert('Enter valid served count');
+        return;
+      }
+
+      try {
+        const { error } = await supabase
+          .from('donations')
+          .update({ status: 'delivered', actual_people_served: count, delivered_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq('id', donationId);
+
+        if (error) throw error;
+
+        alert('Delivery completed. Thank you!');
+        closeDeliveryModal();
+        await updateUserStats();
+        loadHistoryContent();
+      } catch (error) {
+        alert('Failed to complete delivery');
+        console.error(error);
+      }
+    }
+
+    // -----------------------------
+    // Small helpers
+    // -----------------------------
+    function escapeHtml(unsafe) {
+      if (unsafe === null || unsafe === undefined) return '';
+      return String(unsafe)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+  
+
+// -----------------------------
+// Revised Pickup Location Logic
+// -----------------------------
+
+async function selectPickupMethod(method) {
+  document.querySelectorAll('.pickup-btn').forEach(btn => btn.classList.remove('selected'));
+  document.getElementById(`pickup-btn-${method}`).classList.add('selected');
+
+  const pickupText = document.getElementById('pickup-location-text');
+
+  if (method === 'current') {
+    pickupText.textContent = '📍 Pickup Location (Detecting current location...)';
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const address = await reverseGeocode(lat, lng);
+          document.getElementById('pickup-lat').value = lat;
+          document.getElementById('pickup-lng').value = lng;
+          pickupText.textContent = `📍 Pickup Location (${address})`;
+        },
+        (err) => {
+          pickupText.textContent = '📍 Pickup Location (Unable to detect location)';
+        }
+      );
+    } else {
+      pickupText.textContent = '📍 Pickup Location (Geolocation not supported)';
+    }
+  } else if (method === 'saved') {
+    if (currentUser && currentUser.address) {
+      const lat = currentUser.location_lat;
+      const lng = currentUser.location_lng;
+      const address = currentUser.address;
+      document.getElementById('pickup-lat').value = lat;
+      document.getElementById('pickup-lng').value = lng;
+      pickupText.textContent = `📍 Pickup Location (${address})`;
+    } else {
+      pickupText.textContent = '📍 Pickup Location (No saved address found)';
+    }
+  } else if (method === 'map') {
+    document.getElementById('inline-pickup-map-container').classList.remove('hide');
+    pickupText.textContent = '📍 Pickup Location (Select on map...)';
+    initInlinePickupMap();
+  }
+}
+
+async function confirmInlinePickupLocation() {
+  if (!selectedPickupLocation) {
+    alert('Please select a location on map');
+    return;
+  }
+  const { lat, lng } = selectedPickupLocation;
+  const address = await reverseGeocode(lat, lng);
+  document.getElementById('pickup-lat').value = lat;
+  document.getElementById('pickup-lng').value = lng;
+  document.getElementById('pickup-location-text').textContent = `📍 Pickup Location (${address})`;
+  document.getElementById('inline-pickup-map-container').classList.add('hide');
+}
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+    const data = await res.json();
+    return data.display_name || `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  } catch (err) {
+    console.error('Reverse geocode failed', err);
+    return `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  }
+}
+
+// Update registration address display
+async function showLocationPicker(type) {
+  locationModalType = type;
+  document.getElementById('location-modal').classList.remove('hide');
+  if (!locationMap) {
+    initLocationMap();
+  }
+}
+
+function confirmLocation() {
+  if (!selectedLocation) {
+    alert('Please select a location');
+    return;
+  }
+  const { lat, lng, address } = selectedLocation;
+  if (locationModalType === 'registration') {
+    document.getElementById('reg-lat').value = lat;
+    document.getElementById('reg-lng').value = lng;
+    document.getElementById('reg-address').value = address;
+    document.getElementById('location-text').textContent = `📍 Select Your Location (${address})`;
+  }
+  closeLocationPicker();
+}
+
+
+
+// --- Fixed Registration Location Picker (address undefined issue) ---
+
+async function useCurrentLocation() {
+  const statusEl = document.getElementById('location-status');
+  statusEl.textContent = 'Detecting current location...';
+
+  if (!navigator.geolocation) {
+    statusEl.textContent = 'Geolocation not supported by browser.';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(async (pos) => {
+    const lat = pos.coords.latitude;
+    const lng = pos.coords.longitude;
+    const address = await reverseGeocode(lat, lng);
+
+    if (locationMarker) {
+      locationMap.removeLayer(locationMarker);
+    }
+
+    locationMarker = L.marker([lat, lng]).addTo(locationMap);
+    locationMap.setView([lat, lng], 15);
+
+    selectedLocation = { lat, lng, address };
+    statusEl.textContent = `✅ Selected: ${address}`;
+    document.getElementById('confirm-location-btn').disabled = false;
+  },
+  () => {
+    statusEl.textContent = 'Unable to fetch current location.';
+  });
+}
+
+function confirmLocation() {
+  if (!selectedLocation) {
+    alert('Please select a location first.');
+    return;
+  }
+
+  const { lat, lng, address } = selectedLocation;
+  if (locationModalType === 'registration') {
+    document.getElementById('reg-lat').value = lat;
+    document.getElementById('reg-lng').value = lng;
+    document.getElementById('reg-address').value = address;
+    document.getElementById('location-text').textContent = `📍 Select Your Location (${address})`;
+  }
+  closeLocationPicker();
+}
+
+
+
+// --- v3 Update: Proper Address Storage + Saved Location Display ---
+
+// Override register() to store reverse-geocoded address
+async function register() {
+  const name = document.getElementById('reg-name').value.trim();
+  const phone = document.getElementById('reg-phone').value.trim();
+  const username = document.getElementById('reg-username').value.trim();
+  const role = document.getElementById('reg-role').value;
+  const latStr = document.getElementById('reg-lat').value;
+  const lngStr = document.getElementById('reg-lng').value;
+
+  if (!name || !username || !latStr || !lngStr) {
+    alert('Please fill all required fields');
+    return;
+  }
+
+  const lat = parseFloat(latStr);
+  const lng = parseFloat(lngStr);
+  if (isNaN(lat) || isNaN(lng)) {
+    alert('Invalid location coordinates');
+    return;
+  }
+
+  const formattedPhone = phone ? formatPhoneNumber(phone) : null;
+  const address = await reverseGeocode(lat, lng);
+
+  try {
+    const userId = crypto.randomUUID();
+    const { error } = await supabase.from('users').insert({
+      id: userId,
+      full_name: name,
+      phone: formattedPhone,
+      username: username,
+      role: role,
+      location: `POINT(${lng} ${lat})`,
+      location_lat: lat,
+      location_lng: lng,
+      address: address, // store formatted address
+      verified: true,
+      is_active: true,
+      created_at: new Date().toISOString()
+    });
+
+    if (error) throw error;
+
+    if (role === 'beneficiary') {
+      await supabase.from('beneficiaries').insert({
+        user_id: userId,
+        beneficiary_type: document.getElementById('beneficiary-type')?.value || 'individual',
+        organization_name: name,
+        capacity: 50,
+        is_accepting_deliveries: true,
+        created_at: new Date().toISOString()
+      });
+    }
+
+    window.localStorage.setItem('seva_user_id', userId);
+    alert('Registration successful! 🎉');
+    await loadUserData(userId);
+    showMainApp();
+  } catch (error) {
+    alert('Registration failed: ' + (error.message || error));
+    console.error(error);
+  }
+}
+
+// Override selectPickupMethod() to use the real saved address
+async function selectPickupMethod(method) {
+  document.querySelectorAll('.pickup-btn').forEach(btn => btn.classList.remove('selected'));
+  document.getElementById(`pickup-btn-${method}`).classList.add('selected');
+
+  const pickupText = document.getElementById('pickup-location-text');
+
+  if (method === 'current') {
+    pickupText.textContent = '📍 Pickup Location (Detecting current location...)';
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+          const address = await reverseGeocode(lat, lng);
+          document.getElementById('pickup-lat').value = lat;
+          document.getElementById('pickup-lng').value = lng;
+          pickupText.textContent = `📍 Pickup Location (${address})`;
+        },
+        () => {
+          pickupText.textContent = '📍 Pickup Location (Unable to detect location)';
+        }
+      );
+    } else {
+      pickupText.textContent = '📍 Pickup Location (Geolocation not supported)';
+    }
+  } else if (method === 'saved') {
+    if (currentUser && currentUser.address) {
+      const lat = currentUser.location_lat;
+      const lng = currentUser.location_lng;
+      const address = currentUser.address;
+      document.getElementById('pickup-lat').value = lat;
+      document.getElementById('pickup-lng').value = lng;
+      pickupText.textContent = `📍 Pickup Location (${address})`;
+    } else {
+      pickupText.textContent = '📍 Pickup Location (No saved address found)';
+    }
+  } else if (method === 'map') {
+    document.getElementById('inline-pickup-map-container').classList.remove('hide');
+    pickupText.textContent = '📍 Pickup Location (Select on map...)';
+    initInlinePickupMap();
+  }
+}</script>
+</body>
+</html>
